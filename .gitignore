@@ -1,0 +1,8 @@
+.DS_Store
+.idea
+.vagrant
+Vagrantfile
+cert
+*.iml
+build-vars.js
+node_modules

@@ -1,0 +1,18 @@
+{
+  "name": "telegram-cli",
+  "version": "1.0.0",
+  "description": "Control your server using a Telegram bot",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "author": "http://github.com/matheuss",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.14.1",
+    "express": "^4.13.3",
+    "request": "^2.65.0",
+    "randomstring": "~1.1.0"
+  }
+}
