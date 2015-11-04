@@ -29,6 +29,7 @@ var help = "/exec _command_ – execute something\n" +
 var friends        = [];
 var strangers      = [];
 var protectedFiles = [];
+var queue          = [];
 
 app.post(vars.WEBHOOK_URL, function(req, res) {
 	console.log(req.body);
@@ -50,14 +51,14 @@ app.post(vars.WEBHOOK_URL, function(req, res) {
     console.log(strangers);
     if(strangers.indexOf(message.from.id) != -1) {
         var choosen = randint(1, 2);
-
         if (choosen == 1) {
             sendSticker(data, "BQADAgADvgADEwvrBCIBxkL5iigcAg");
         } else if (choosen == 2) {
-            sendMessage(data, "I'm sorry but I need to sleep right now – it's kinda late here in the cloud "
-                               + emoji.get("sweat_smile"));
-            sendSticker(data, "BQADBQADIQADw20RBFERg4uIH5-_Ag", true);
+            queue.push([data, 'message', "I'm sorry but I need to sleep right now – it's kinda late here in the cloud "
+                                          + emoji.get("sweat_smile"), false]);
+            queue.push([data, 'sticker', 'BQADBQADIQADw20RBFERg4uIH5-_Ag']);
         }
+        sendQueue();
         return
 
     } else if(friends.indexOf(message.from.id) == -1 && message.from.id != vars.OWNER_ID) {
@@ -81,9 +82,9 @@ app.post(vars.WEBHOOK_URL, function(req, res) {
             files = files.split(" ");
             for(f in files) {
                 if (protectedFiles.indexOf(files[f]) != -1) {
-                    sendSticker(data, "BQADAgADsgADEwvrBJysIqEeQXeSAg");
-                    sendMessage(data, "What are you trying to do with me???", false, true);
-                    return
+                    queue.push([data, 'sticker', "BQADAgADsgADEwvrBJysIqEeQXeSAg"]);
+                    queue.push([data, 'message', "What are you trying to do with me???", false]);
+                    return;
                 }
             }
         }
@@ -116,25 +117,19 @@ app.post(vars.WEBHOOK_URL, function(req, res) {
     }
 });
 
-function sendMessage(data, text, markdown, later) {
-    var ms = 1;
+function sendMessage(_data, text, markdown) {
+    var data = JSON.parse(JSON.stringify(_data));
     data.text = text;
 
     if(markdown){
         data.parse_mode = "Markdown";
     }
-    if(later) {
-        ms = 100;
-    }
-    setTimeout(function() {
-        request.post({
-            url: "https://api.telegram.org/bot" + vars.BOT_TOKEN + "/sendMessage",
-            formData: data
-            }, function (err, res, body) {
-                console.log(err);
-                console.log(body);
-            });
-        }, ms);
+    request.post({
+        url: "https://api.telegram.org/bot" + vars.BOT_TOKEN + "/sendMessage",
+        formData: data
+    }, function (err, res, body) {
+        sendQueue();
+    });
 }
 
 function sendTroubleMessage(data) {
@@ -146,27 +141,22 @@ function randint (low, high) {
     return Math.floor(Math.random() * (high - low + 1) + low);
 }
 
-function sendSticker(data, sticker, later) {
-    var ms = 1;
+function sendSticker(_data, sticker) {
+    var data = JSON.parse(JSON.stringify(_data));
     data.sticker = sticker;
 
-    if(later) {
-        ms = 100;
-    }
-    setTimeout(function() {
-        request.post({
-                url: "https://api.telegram.org/bot" + vars.BOT_TOKEN + "/sendSticker",
-                formData: data
-            }, function (err, res, body) {
-                console.log(err);
-                console.log(body);
-            });
-        }, ms);
+    request.post({
+        url: "https://api.telegram.org/bot" + vars.BOT_TOKEN + "/sendSticker",
+        formData: data
+    }, function (err, res, body) {
+        sendQueue();
+    });
 }
 
 function offerHelp(data) {
-    sendSticker(data, "BQADBQADIwADw20RBDWi8t98s12bAg");
-    sendMessage(data, "Do you need some /help?", false, true);
+    queue.push([data, 'sticker', "BQADBQADIwADw20RBDWi8t98s12bAg"]);
+    queue.push([data, 'message', "Do you need some /help?", false]);
+    sendQueue();
 }
 
 exec("ls -a", function(err, stdout, stderr) {
@@ -177,3 +167,14 @@ exec("ls -a", function(err, stdout, stderr) {
     }
         protectedFiles = stdout.split("\n");
 });
+
+function sendQueue() {
+    if(queue.length > 0) {
+        var el = queue.shift();
+        if(el[1] == 'sticker') {
+            sendSticker(el[0], el[2]);
+        } else if(el[1] == 'message') {
+            sendMessage(el[0], el[2], el[3]);
+        }
+    }
+}
