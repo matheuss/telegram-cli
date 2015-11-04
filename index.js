@@ -75,6 +75,7 @@ app.post(vars.WEBHOOK_URL, function(req, res) {
     if(message.text.indexOf("exec") == 0) {
         if(message.text.length < 6) {
             sendMessage(data, "What do you want me to execute? If you're lost, try this: *exec date*", true)
+            return;
         } else {
             var files = message.text.substring(message.text.indexOf(" ", message.text.lastIndexOf("-")) + 1, message.text.length);
             files = files.split(" ");
