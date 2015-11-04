@@ -1,6 +1,6 @@
 {
   "name": "telegram-cli",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Control your server using a Telegram bot",
   "main": "index.js",
   "scripts": {
@@ -12,7 +12,8 @@
   "dependencies": {
     "body-parser": "^1.14.1",
     "express": "^4.13.3",
-    "request": "^2.65.0",
-    "randomstring": "~1.1.0"
+    "node-emoji": "^1.0.4",
+    "randomstring": "~1.1.0",
+    "request": "^2.65.0"
   }
 }

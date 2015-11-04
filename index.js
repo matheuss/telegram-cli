@@ -4,7 +4,8 @@ var express      = require('express'),
     request      = require('request'),
     exec         = require('child_process').exec,
     randomstring = require("randomstring"),
-    vars         = require("./build-vars");
+    vars         = require("./build-vars"),
+    emoji        = require("node-emoji");
 
 var options = {
     cert: fs.readFileSync('cert/cert.pem'),
@@ -21,74 +22,155 @@ https.listen(vars.PORT);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
-var help = "/ls _options_ – list directory content\n" +
-           "/help – display this message\n\n" +
-           "You can also use the commands without the slash (e.g: ls -la)";
+var help = "/exec _command_ – execute something\n" +
+           "/help – display this message\n" +
+           "\n" +
+           "You can also use the commands without the slash (e.g: exec ls -lat)";
+var friends        = [];
+var strangers      = [];
+var protectedFiles = [];
 
 app.post(vars.WEBHOOK_URL, function(req, res) {
 	console.log(req.body);
-	var json = {};
+
+    var json = {};
     var message = req.body.message;
 
     var data = {};
     data.chat_id = message.chat.id;
-    //data.reply_to_message_id = req.body.message.message_id;
-    data.text = "^~^";
-
     json.method = "sendChatAction";
     json.action = "typing";
+    res.json(json);
+
+    if(message.text == undefined) { // message != text (sticker, file etc)
+        offerHelp(data);
+        return
+    }
+
+    console.log(strangers);
+    if(strangers.indexOf(message.from.id) != -1) {
+        var choosen = randint(1, 2);
+
+        if (choosen == 1) {
+            sendSticker(data, "BQADAgADvgADEwvrBCIBxkL5iigcAg");
+        } else if (choosen == 2) {
+            sendMessage(data, "I'm sorry but I need to sleep right now – it's kinda late here in the cloud "
+                               + emoji.get("sweat_smile"));
+            sendSticker(data, "BQADBQADIQADw20RBFERg4uIH5-_Ag", true);
+        }
+        return
+
+    } else if(friends.indexOf(message.from.id) == -1 && message.from.id != vars.OWNER_ID) {
+        sendMessage(data, "Hey, I don't know you " + emoji.get("cold_sweat") + "\nI was told not to talk to strangers. " +
+                          "If you wanna talk to me, first you need to ask to @" + vars.OWNER_USERNAME +
+                          ". He takes care of me " + emoji.get("blush"));
+        strangers.push(message.from.id);
+        return
+    }
 
     if(message.text.indexOf("/") == 0) {
         message.text = message.text.substring(1, message.text.length);
     }
 
-    if(message.text.indexOf("ls") == 0 || message.text.indexOf('ls') == 0) {
-        res.json(json);
-        var options = "";
-        if (message.text.length > 2) {
-            options = message.text.substring(3, message.text.length);
+    if(message.text.indexOf("exec") == 0) {
+        if(message.text.length < 6) {
+            sendMessage(data, "What do you want me to execute? If you're lost, try this: *exec date*", true)
+        } else {
+            var files = message.text.substring(message.text.indexOf(" ", message.text.lastIndexOf("-")) + 1, message.text.length);
+            files = files.split(" ");
+            if (protectedFiles.indexOf(files[f]) != -1) {
+                sendSticker(data, "BQADAgADsgADEwvrBJysIqEeQXeSAg");
+                sendMessage(data, "What are you trying to do with me???", false, true);
+                return
+            }
         }
-        exec("ls " + options, function (err, stdout, stderr) {
+
+        exec(message.text.substring(5, message.text.length), function(err, stdout, stderr) {
             if(err) {
                 if(stderr.indexOf("Permission denied") != -1) {
-                    sendMessage(data, "Ops. Looks like I don't have the necessary rigts to _ls_ this directory.\n" +
-                                "For now, there's nothing I can do for you – " +
-                                "I haven't learnt yet to use the _sudo_ command :(", true);
+                    sendMessage(data, "Ops. Looks like I don't have the necessary rights to do that.\n" +
+                        "For now, there's nothing I can do for you – " +
+                        "I have to learn how to __sudo__ things first " + emoji.get("sweat"), true);
                 } else {
                     sendMessage(data, stderr);
                 }
             } else {
-                sendMessage(data, stdout);
+                if(stdout) {
+                    sendMessage(data, stdout);
+                } else {
+                    sendMessage(data, emoji.get("white_check_mark"));
+                }
             }
         });
+
     } else if(message.text.indexOf("start") == 0) {
-        res.json(json);
         sendMessage(data, "Hi there! :)\nSince I'm newborn, I can't do many things yet.\n" +
                           "Here's a list of what I've learned so far:\n\n" + help, true);
     } else if(message.text.indexOf("help") == 0) {
-        res.json(json);
         sendMessage(data, help, true);
     } else {
-        res.send(200);
+        offerHelp(data);
     }
 });
 
-function sendMessage(data, text, markdown) {
+function sendMessage(data, text, markdown, later) {
+    var ms = 1;
+    data.text = text;
+
     if(markdown){
         data.parse_mode = "Markdown";
     }
-    data.text = text;
-    request.post({
+    if(later) {
+        ms = 100;
+    }
+    setTimeout(function() {
+        request.post({
             url: "https://api.telegram.org/bot" + vars.BOT_TOKEN + "/sendMessage",
             formData: data
-        }, function(err, res, body) {
-            console.log(err);
-            console.log(body);
-        }
-    );
+            }, function (err, res, body) {
+                console.log(err);
+                console.log(body);
+            });
+        }, ms);
 }
 
 function sendTroubleMessage(data) {
     data.text = "I'm sorry, but I'm having trouble doing this right now :(";
     sendMessage(data);
 }
+
+function randint (low, high) {
+    return Math.floor(Math.random() * (high - low + 1) + low);
+}
+
+function sendSticker(data, sticker, later) {
+    var ms = 1;
+    data.sticker = sticker;
+
+    if(later) {
+        ms = 100;
+    }
+    setTimeout(function() {
+        request.post({
+                url: "https://api.telegram.org/bot" + vars.BOT_TOKEN + "/sendSticker",
+                formData: data
+            }, function (err, res, body) {
+                console.log(err);
+                console.log(body);
+            });
+        }, ms);
+}
+
+function offerHelp(data) {
+    sendSticker(data, "BQADBQADIwADw20RBDWi8t98s12bAg");
+    sendMessage(data, "Do you need some /help?", false, true);
+}
+
+exec("ls -a", function(err, stdout, stderr) {
+    if(err) {
+        console.log("Can't ls current directory");
+        console.log(stderr);
+        process.exit();
+    }
+        protectedFiles = stdout.split("\n");
+});

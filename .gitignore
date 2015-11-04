@@ -4,5 +4,4 @@
 Vagrantfile
 cert
 *.iml
-build-vars.js
 node_modules
