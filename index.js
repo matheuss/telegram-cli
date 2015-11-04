@@ -78,10 +78,12 @@ app.post(vars.WEBHOOK_URL, function(req, res) {
         } else {
             var files = message.text.substring(message.text.indexOf(" ", message.text.lastIndexOf("-")) + 1, message.text.length);
             files = files.split(" ");
-            if (protectedFiles.indexOf(files[f]) != -1) {
-                sendSticker(data, "BQADAgADsgADEwvrBJysIqEeQXeSAg");
-                sendMessage(data, "What are you trying to do with me???", false, true);
-                return
+            for(f in files) {
+                if (protectedFiles.indexOf(files[f]) != -1) {
+                    sendSticker(data, "BQADAgADsgADEwvrBJysIqEeQXeSAg");
+                    sendMessage(data, "What are you trying to do with me???", false, true);
+                    return
+                }
             }
         }
 
