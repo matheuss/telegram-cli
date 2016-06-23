@@ -1,5 +1,5 @@
 var express      = require('express'),
-	fs           = require('fs'),
+    fs           = require('fs'),
     bodyParser   = require('body-parser'),
     request      = require('request'),
     exec         = require('child_process').exec,
@@ -14,8 +14,8 @@ var options = {
     rejectUnauthorized: false
 };
 
-var app      = express(),
-	https    = require('https').createServer(options, app);
+var app  = express(),
+https    = require('https').createServer(options, app);
 
 https.listen(vars.PORT);
 
